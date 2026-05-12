@@ -1,0 +1,82 @@
+================================================================================
+ZVAIGZNES (STAR) SHĒMAS GRAFISKS ATTĒLOJUMS — PARDOŠANAS / NOLIKTAVA
+================================================================================
+
+ASCII
+-----
+                              ┌─────────────────┐
+                              │   DIM_CALENDAR  │
+                              │  (Laika dim.)   │
+                              │ PK: calendar_id │
+                              │ Hierarhija:     │
+                              │  Gads→Ceturksnis│
+                              │  →Mēnesis→Diena │
+                              └────────┬────────┘
+                                       │
+                                       │ 1
+                                       │
+         ┌─────────────────┐           │           ┌─────────────────┐
+         │   DIM_PRODUCT   │           │           │    DIM_STORE    │
+         │ (Preces dim.)   │           │           │ (Veikala dim.)  │
+         │ PK: product_id  │           │           │ PK: store_id    │
+         │ Hierarhija:     │           │           │ Hierarhija:     │
+         │  Kategorija→Prece          │           │ Valsts→Reģions  │
+         └────────┬────────┘           │           │ →Pilsēta→Veikals
+                  │                   │           └────────┬────────┘
+                  │ N                 │                    │ N
+                  │                   │                    │
+                  └──────────┬────────┴──────────┬─────────┘
+                             │    FACT_SALES    │
+                             │  (Faktu tabula)  │
+                             │ PK: sale_id      │
+                             │ FK: calendar_id  │
+                             │ FK: product_id   │
+                             │ FK: store_id     │
+                             │ Mērītāji: qty,   │
+                             │ amount, discount │
+                             └──────────────────┘
+
+Mermaid (iewēļ atskaitē kā diagrammu)
+--------------------------------------
+erDiagram
+    DIM_CALENDAR ||--o{ FACT_SALES : "calendar_id"
+    DIM_PRODUCT  ||--o{ FACT_SALES : "product_id"
+    DIM_STORE    ||--o{ FACT_SALES : "store_id"
+
+    DIM_CALENDAR {
+        NUMBER calendar_id PK
+        DATE   full_date
+        NUMBER year_no
+        NUMBER quarter_no
+        NUMBER month_no
+        NUMBER day_no
+    }
+
+    DIM_PRODUCT {
+        NUMBER product_id PK
+        VARCHAR2 product_name
+        VARCHAR2 category_name
+        VARCHAR2 subcategory_name
+        VARCHAR2 brand_name
+    }
+
+    DIM_STORE {
+        NUMBER store_id PK
+        VARCHAR2 store_name
+        VARCHAR2 city_name
+        VARCHAR2 region_name
+        VARCHAR2 country_name
+    }
+
+    FACT_SALES {
+        NUMBER sale_id PK
+        NUMBER calendar_id FK
+        NUMBER product_id FK
+        NUMBER store_id FK
+        NUMBER quantity_sold
+        NUMBER unit_price
+        NUMBER discount_pct
+        NUMBER line_amount
+    }
+
+================================================================================

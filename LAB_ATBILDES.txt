@@ -1,0 +1,159 @@
+
+*************************************************************************
+PRAKTISKAIS DARBS: DAUDZDIMENSIJU DATU BĀZE (atskaites izvade)
+*************************************************************************
+
+TEKSTS
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Ģenerēts: 2026-05-12 08:21:45; lietotājs=LAB_USER
+
+1 row selected.
+
+
+[1.-2.] Zvaigžņu shēma: FACT_SALES plus trīs dimensijas un hierarhijas
+
+       LVL APRAKSTS
+---------- ------------------------------------------------------------------------------
+         1 FACT_SALES faktu tabula: vienai pārdošanas pozīcijai vienā laikā vienā vietā
+           vienai precei.
+
+         2 DIM_CALENDAR laikā hierarhija gads ceturksnis mēnesis diena kolonnās year_no
+           quarter_no month_no day_no un full_date.
+
+         3 DIM_PRODUCT hierarhija kategorija apakškategorija zīmols nosaukums sku kods
+           (vismaz piecas kolonnas papildus atslēgai).
+
+         4 DIM_STORE hierarhija valsts reģions pilsēta veikala tips un veikala nosaukums.
+         5 Grafiskais attēls: schema_diagram.txt (ASCII vai Mermaid ER blokā).
+
+5 rows selected.
+
+
+[3.-4.] Dimensijas vismaz 20 rindas faktu tabula vismaz 100 000 rindas
+
+TABULA           RINDAS STĀVOKLIS
+------------ ---------- -----------------------
+dim_calendar         25 prasība izpildīta
+dim_product          25 prasība izpildīta
+dim_store            25 prasība izpildīta
+fact_sales       120000 prasība izpildīta
+
+4 rows selected.
+
+
+[4.] Kontroles SELECT: piecas pirmās faktu rindas ar JOIN uz dimensijām
+
+   SALE_ID DATUMS     CATEGORY_NAME                                                                    REGION_NAME                                                                      QUANTITY_SOLD LINE_AMOUNT
+---------- ---------- -------------------------------------------------------------------------------- -------------------------------------------------------------------------------- ------------- -----------
+         1 2019-01-02 CATE                                                                             Region_1                                                                                     8      600.08
+         2 2019-01-23 CATC                                                                             Region_1                                                                                    12      102.71
+         3 2019-01-24 CATC                                                                             Region_2                                                                                    11     1787.29
+         4 2019-01-10 CATB                                                                             Region_1                                                                                     9     1630.58
+         5 2019-01-19 CATC                                                                             Region_2                                                                                     2      236.33
+
+5 rows selected.
+
+
+[5.] Agregātvaicājumi: salīdziniet saknes COST trīs situācijās (bez/B-tree/bit)
+
+APRAKSTS                                                                       NAV_INDEKSA_COST B_TREE_COST BITMAP_COST
+------------------------------------------------------------------------------ ---------------- ----------- -----------
+Q1 gads+kategorija SUM COUNT
+
+1 row selected.
+
+
+APRAKSTS                                                                       NAV_INDEKSA_COST B_TREE_COST BITMAP_COST
+------------------------------------------------------------------------------ ---------------- ----------- -----------
+Q2 reģions AVG SUM COUNT
+
+1 row selected.
+
+
+APRAKSTS                                                                       NAV_INDEKSA_COST B_TREE_COST BITMAP_COST
+------------------------------------------------------------------------------ ---------------- ----------- -----------
+Q3 ceturksnis un veikala nosaukums COUNT SUM
+
+1 row selected.
+
+
+[5.] Skaidrojums: mazāks COST optimizeram parasti norāda vieglāk plānu ar līdzīgu statistiku.
+Pilni EXPLAIN PLAN izvades bija skriptos 04 05 un 06. Ja BITMAP_COST ir NULL pārbaudiet CREATE BITMAP kļūdu vai indeksu tipu uz FACT_SALES.
+Piezīme prasmīgam secinājumam: COST ir optimizer modelis nevis sekundes; BitMap ne vienmār ir mazākais COST.
+Šīs trīs rindas ar COST ielīmējiet arī Word dokumenta rezultātu tabulā.
+
+[6.] Materializētu skatu COMPLETE refres laiki sekundēs no DBMS_UTILITY.GET_TIME centisekundēm / 100
+MV_YEAR_CATEGORY_SALES_refresh_s .11
+MV_REGION_MONTH_SALES_refresh_s .07
+MV_CAT_REG_YEAR_refresh_s .03
+
+PL/SQL procedure successfully completed.
+
+
+[6.] USER_MVIEWS (rewrite iespēja)
+
+MVIEW_NAME                                                                                                                       REWRITE_C
+-------------------------------------------------------------------------------------------------------------------------------- ---------
+MV_CAT_REG_YEAR                                                                                                                  GENERAL
+MV_REGION_MONTH_SALES                                                                                                            GENERAL
+MV_YEAR_CATEGORY_SALES                                                                                                           GENERAL
+
+3 rows selected.
+
+
+[6.] REWRITE pierādījums: EXPLAIN PLAN ar hint REWRITE un NOTE sadaļu
+
+0 rows deleted.
+
+
+Explained.
+
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3276053712
+
+-------------------------------------------------------------------------------------
+| Id  | Operation            | Name         | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |              |     4 |   104 |   179   (2)| 00:00:01 |
+|   1 |  HASH GROUP BY       |              |     4 |   104 |   179   (2)| 00:00:01 |
+|*  2 |   HASH JOIN          |              |   120K|  3046K|   177   (1)| 00:00:01 |
+|   3 |    TABLE ACCESS FULL | DIM_PRODUCT  |    25 |   200 |     3   (0)| 00:00:01 |
+|*  4 |    HASH JOIN         |              |   120K|  2109K|   174   (1)| 00:00:01 |
+|   5 |     TABLE ACCESS FULL| DIM_CALENDAR |    25 |   175 |     3   (0)| 00:00:01 |
+|   6 |     TABLE ACCESS FULL| FACT_SALES   |   120K|  1289K|   171   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   2 - access("P"."PRODUCT_ID"="FS"."PRODUCT_ID")
+   4 - access("C"."CALENDAR_ID"="FS"."CALENDAR_ID")
+
+Hint Report (identified by operation id / Query Block Name / Object Alias):
+Total hints for statement: 1 (U - Unused (1))
+---------------------------------------------------------------------------
+
+   1 -  SEL$9E43CB6E
+         U -  REWRITE
+
+Note
+-----
+   - this is an adaptive plan
+
+30 rows selected.
+
+
+[7.] Ievietojiet šajā failā redzamos skaitļus un plānus kopsavilkuma tabulās atskaitē.
+[8.] Īss secinājumu saraksts (papildināt ar pārliecinošu argumentāciju).
+
+SECINAJUMS
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Bitmap indeksi uz zemu kardinalitātes atslēgām zvaigžņu shēmā bieži samazina JOIN un filtra izmaksas agregātiem salīdzinot ar pilnu tabulas skenēšanu.
+B-koka indeksi uz faktu ārējām atslēgām palīdz efektīvi savienot lielo faktu tabulu ar mazajām dimensiju tabulām.
+Materializētie skati ar query rewrite ļauj lasīt jau iepriekš saglabātos agregātus tāpēc analītiskie vaicājumi kļūst ātrāki bet datu svaigums ir atkarīgs no refresh.
+Trūkumi: refresh izmaksas liels diska un CPU patēriņš ja dati bieži mainās un modelis ir mazāk piemērots tipiskam OLTP ar smagu rakstīšanu.
+
+4 rows selected.
+

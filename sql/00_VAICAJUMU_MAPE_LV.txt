@@ -1,0 +1,2 @@
+Šeit ir VISI uzdevumu SQL komplekta failu (01 līdz 99 + utlxplan opcija).
+Darba kārtību skatīt 00_README_LV.txt vai ATSKAIDES_STRUCTURE_PASNIEDZAJAM.txt.
