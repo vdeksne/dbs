@@ -1,0 +1,191 @@
+================================================================================
+2. LABORATORIJAS DARBS — Relācijas modelis vs relāciju–objektu Oracle
+   (vērtināšanas kritērijs — EXPLAIN PLAN saknes COST; plānu ekrānšāvus neiekļāvu)
+Datu kopas izpilde: Oracle AI Database Free, PDB FREEPDB1 (žurnālā uzskaite ~2026-05-13)
+================================================================================
+
+Mērķis
+-----
+Noskaidrot, vai viena saliktā objektu tabula (relāciju–objektu modelis), kur dati sakārtoti
+hierarchijā un kolekcijās, optimizācijas skaitļos dod „labāku” COST kā četras saistītas
+relāciju tabulas. Praksē COST ir tikai prognoze sekundēs/sarežģītības vienībās, ne faktiska
+izmēru mērijums; tas ir vienīgais prasītā salīdzinājuma kritērijs.
+
+
+Relāciju ER shēmas attēlotā forma (atkārtojums atskaitē)
+-------------------------------------------------------
+ER loģikas bloks: fakts ir T2_SALE; četras saistītās entitātes:
+  T2_REGION (1) — (N) T2_STORE,  T2_STORE (1) — (N) T2_SALE,  T2_PRODUCT (1) — (N) T2_SALE.
+  Katrā pārdošanas rindiņā ārējās atslēgas uz veikalu un preci.
+
+ASCII un Mermaid kods pieejams arī failā diagrams_ER_OR.txt (var ielikt Word/LibreOffice
+ kā attēlu pēc kopēšanas no Mermaid redaktoriem vai zīmējot no jauna vienādai loģikai).
+
+Piezīme: klasiskās ER kārtības dēļ bieži zīmē tā, ka T2_PRODUCT un T2_STORE saistās ar T2_SALE
+ar N:1 kartēšanu uz pārdošanas rindiņu.
+
+
+Relāciju–objektu shēmas attēlots analogs (kā materiālā)
+------------------------------------------------------
+Viena rinda pamattabulā — viena reģiona objekts t2_region_o:
+
+  • reģiona lauki (region_id, r_name),
+  • 1. līmenis: veikalu kolekcija (NESTED TABLE stores),
+  • 2. līmenis: katra veikala pārdošanas rindas (lines),
+  • iegults produkta objekts prod katrā rindā (hierarchija zem rindas),
+  • MEMBER metodes: piemēram revenue_for_qty, line_value, region_label, total_qty utt.
+
+Fiziski: T2_REGION_OBJ_TAB ar NESTED TABLE stores STORE AS … un iekškolekcijas lines STORE AS …
+
+
+(punkti pēc uzdevuma formulējuma)
+
+
+1. Četras relāciju tabulas un datu apjomi
+-----------------------------------------
+Izveidots modelis demonstrācijas funkcijām (DDL skriptā 01_relational_ddl.sql):
+
+  • T2_REGION   — region_id, r_name
+  • T2_STORE    — store_id, region_id, s_name (FK uz reģionu)
+  • T2_PRODUCT  — product_id, p_name, unit_price
+  • T2_SALE     — sale_id, store_id, product_id, qty, sale_date
+                (FK uz veikalu un uz preci); indeksi uz veikalu, preci un datumu
+
+Ielasītie apjomi pēc INSERT (kopēts no žurnālā task2_run_….txt):
+
+    t2_region           5
+    t2_store           25
+    t2_product        200
+    t2_sale       120 000     ← uzdevuma prasība (≥100 000) izpildīta
+
+Testa datos reģiona un veikalu struktūras ir mazas, uz pārdošanas faktu balstītie vaicājumi
+izmanto lielo T2_SALE bloku (~120 tūkst. «safiltrējamu» fakta rindu klasiskajā savienojumu shēmā).
+
+
+2. Divas PL/SQL funkcijas (relāciju testa SELECT)
+-----------------------------------------------
+Definētas 03_functions.sql:
+
+    f2_line_value(unit_price, qty)  — apaļo līdz 2 zīmām: cena × daudzums;
+    f2_region_label(region_id)    — cilvēkam lasāmā kartīte piemēram REG-005.
+
+Abi ir DETERMINISTIC, jo no tiem pašiem argumentiem vienmēr tas pats rezultāts —
+optimizētājs teorētiski drīkstētu arī izmantot kešošanu vai vienkāršojumus.
+
+
+3. Pieci SELECT relāciju variantā
+----------------------------------
+Visas četras tabulas piedalās katrā vaicājumā ar Oracle klasisko:
+    FROM tab1 alias1, tab2 alias2, …  WHERE uz nosacījumiem uz atslēgām
+bez JOIN sintakses (vērtību salīdzinājums kā prasīts).
+
+Piemērots EXPLAIN PLAN (statement_id):
+
+  T2_RQ1 — SUM(f2_line_value(…)) pēc reģioniem (izmantotas funkcijas);
+  T2_RQ2 — COUNT un f2_region_label pēc region_id grupas (otrā funkciju vaicājums);
+  T2_RQ3 — AVG(qty), SUM(unit_price); filtrs region_id ∈ (1..3);
+  T2_RQ4 — SUM(qty) datumam starp noteiktu intervālu;
+  T2_RQ5 — SUM(qty) pēc region_id un HAVING kopsuma > 15 000 (visiem demo reģioniem patiesībā
+           der, jo katra reģionā ir ap ~24 tūkst. iegādāto vienību kopā).
+
+Fails: 04_relational_queries_plan.sql; pirms plānu ģenerēšanas tas vāc statistiku tabulām.
+
+
+4. COST relāciju modelim (saknes SELECT STATEMENT)
+--------------------------------------------------
+Izvade no veiksmīgas izpildes (kopēti dati žurnālā task2_run_20260513_065338.txt):
+
+    statement_id     root_COST
+    T2_RQ1              133
+    T2_RQ2              115
+    T2_RQ3              131
+    T2_RQ4              127
+    T2_RQ5              131
+
+Interpretācija: relatīvi līdzīgas vērtības — optimizētājs visos piecos gadījumos vērtē vienu līdzīgu
+četru tabulas savērseni ar WHERE un masveida agregātus pār fakta tabulu; nevienam COST nav krietni
+citā kārtību veida atšķirība.
+
+
+5–7. Objektu modelis — struktūra, metodes un pieci analogie SELECT
+-----------------------------------------------------------------
+Objektu tipu un BODY loģikas kopsaukums:
+
+  • t2_product_t          — lauki + MEMBER revenue_for_qty(qty),
+  • t2_sale_line_t        — lauki, iegultais prod un MEMBER line_value(),
+  • t2_sale_line_nt       — iekščolekcijas tips,
+  • t2_store_t            — lauki, lines kolekcija; BODY satur MEMBER store_line_value(); piecu
+                            salīdzinošo SELECT formulās tā konkrēti neparādās — izvēlētas citas tipa metodes,
+  • t2_region_o           — reģiona lauki + stores kolekcija + MEMBER region_label(),
+                            total_qty(), total_line_value().
+
+Pamattbula: T2_REGION_OBJ_TAB OF t2_region_o ar NESTED TABLE glabātuvēm.
+
+Datu imports: PL/SQL 06_object_load.sql — strukturē atkārtoti tas pats saturs kā relācijās:
+ pieci ieraksti reģiona līmenī un visi ~120 tūkst. sakārtoti pa veikalu «rindkopām».
+
+Pieci analogie SELECT (07_object_queries_plan.sql) ar TABLE(t.stores) un TABLE(st.lines):
+
+  • T2_OQ1 — SUM(l.line_value()) (atbalsta RQ1 ideju),
+  • T2_OQ2 — MAX(region_label()), COUNT(*) (atbilst RQ2 grupēšanas idejai),
+  • T2_OQ3 — tādas pašas kolonnas kā RQ3, WHERE līdzībai pievienots patiess nosacījums ar
+           (l.prod).revenue_for_qty(l.qty) = l.line_value(),
+  • T2_OQ4 — SUM qty ar datumu kā RQ4, klāt line_value() >= 0, lai metode tiktu izvērtējama,
+  • T2_OQ5 — HAVING kā RQ5, papildināts MAX(t.total_qty()) metodi demonstrēt.
+
+Fails pirms «Explained» vāc CASCADE statistiku pa objektu un iekščolekcijām.
+
+
+8. COST relāciju–objektu modelim (saknes SELECT STATEMENT)
+----------------------------------------------------------
+Žurnālā tās pašas COST vērtības:
+
+    statement_id       root_COST
+    T2_OQ1                   2
+    T2_OQ2               48945
+    T2_OQ3                   1
+    T2_OQ4                 276
+    T2_OQ5               48945
+
+
+9. Salīdzinājuma tabula un secinājumi
+======================================
+
+| Nr | Relācija (statement_id) | COST (Rel.) | Objektu tabula | COST (OR) | īss rezumējums uz vienu rindiņu |
+|----|--------------------------|-------------|----------------|-----------|-----------------------------------|
+| 1 | T2_RQ1                   |    133       | T2_OQ1         |     2     | OR mazākas novērtētās COST; plānam cits kolekcijas un agregātā aplēšu modelis nekā JOIN tabulas |
+| 2 | T2_RQ2                   |    115       | T2_OQ2         | 48945     | ievērojami lielāka OR COST — kolekcijas izvēršana, GROUP BY, MAX |
+| 3 | T2_RQ3                   |    131       | T2_OQ3         |     1     | OR mazākas COST; papildu WHERE satur metožu salīdzinājumu kā loģiski patiesu papildfiltri |
+| 4 | T2_RQ4                   |    127       | T2_OQ4         |   276     | OR mazliet augstāka nekā relācijas plānos |
+| 5 | T2_RQ5                   |    131       | T2_OQ5         | 48945     | OR atkal ļoti augsts — sarežģītas izvērstas struktūras + HAVING + metode kopā grupā |
+
+Analīze pēc izmēģinājumu datiem
+-------------------------------
+Demonstrācijas reģistra tabulas (pieci reģioni, divdesmit pieci veikali) satur maz ierakstu skaitu salīdzinot ar
+miljonu līmeni «īstu» mazumdatu kopām. Pārdošanas fakta tabulā tas joprojām nodrošina ap 120 tūkst. rindiņu kā
+pieprasa uzdevuma apjoma slieksnis.
+
+Klassiskās četras relāciju tabulas ar indeksiem uz faktu ārējām atslēgām dod salīdzinoši līdzīgus COST ap **115–133** visiem piecu vaicājumu variantiem šajā EXPLAIN PLAN izvadē.
+
+Saliktā objektu tabulas modelī datu pamats vienā līmenī kļūst par nested table blokiem un TABLE(…) atlasi.
+Tam uzliek citu cardinality uzskatu: dažām OR formulām COST ir mazs (OQ1, OQ3), citām — ļoti liels (**48945** pie OQ2 un OQ5),
+kad uz izvērsta kolekcijas plaknes tiek likti GROUP BY vai HAVING. Šāda COST starpība nenozīmē automātiski tādas pašas fiziskās izpildes laika atšķirības sekundēs — to būtu jāpamato ar mērīšanu.
+
+Secinājumi
+---------
+• Uz uzdotajiem eksperimentālajiem datiem relāciju–objektu modelis nevienmēr dod labāku optimizētāja COST nekā relatīvais variants:
+  OQ2 un OQ5 analogiem ir ļoti liela COST (**48945**), kamēr RQ2 un RQ5 saglabājas ap **115–131**. Savukārt OQ1 un OQ3 šajā izpildē rāda zemākas COST nekā attiecīgie relatīvie vaicājumi.
+
+• Tas saskan ar to, ka kolekciju TABLE(…) izvēršana kopā ar GROUP BY / HAVING un metožu izsaukumiem var padarīt plānu optimizētāja acīs dārgāku nekā četru tabulu savienojumu ar indeksētu faktu.
+
+• OR loģika labi atbilst biznesa hierarhijai (reģions → veikals → pārdošanas rinda ar iegūtu preces objektu). Tas ir strukturāls ieguvums, kas nav pilnībā izsakāms tikai caur šajā tabulā apkopoto COST.
+
+• Mazāka vai lielāka COST pēc EXPLAIN nav tas pats kas īsāks vai garāks reālais izpildes laiks bez atsevišķas mērīšanas. Atskaitē esmu norādījis tieši uzdevumā prasīto — saknes SELECT STATEMENT COST no izpildes žurnāla.
+
+ ✓ ER un OR attēlots (diagrams_ER_OR.txt + atkārtojums šajā tekstā);  
+ ✓ ≥100000 rindiņu T2_SALE; četras saistītās tabulas;  
+ ✓ divas funkcijas un divi relācijas SELECTiem ar šīm funkcijām; pieci SELECT ar visām tabulām un WHERE (bez JOIN);  
+ ✓ pieci analogie SELECT ar metodēm OR pusē un EXPLAIN;  
+ ✓ kopējās COST tabulas aizpildītas ar reālā žurnālā laukiem.
+
+
