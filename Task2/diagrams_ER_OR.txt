@@ -1,0 +1,64 @@
+================================================================================
+TASK 2 — Relāciju modelis (ER) un relāciju–objektu struktūra (OR)
+================================================================================
+
+1) RELĀCIJU ER (četras tabulas: REĢIONS → VEIKALS → PĀRDOŠANA ← PRECE)
+
+ASCII
+-----
+    ┌──────────────┐       ┌──────────────┐
+    │  T2_REGION   │ 1   N │  T2_STORE    │
+    │  region_id   │◄──────┤  store_id    │
+    └──────┬───────┘       │  region_id FK│
+           │               └──────┬───────┘
+           │                      │
+           │ N                    │ 1
+           │    ┌─────────────────┼─────────────────┐
+           │    │                 │ N               │ N
+    ┌──────▼────▼────┐     ┌──────▼───────┐   ┌─────▼─────────┐
+    │    T2_SALE     │     │ (store       │   │  T2_PRODUCT   │
+    │ sale_id PK     │     │  links sale) │   │  product_id   │
+    │ store_id FK    │     └──────────────┘   └───────────────┘
+    │ product_id FK  │─────────────────────────────►
+    └────────────────┘
+
+Mermaid (ER)
+------------
+erDiagram
+    T2_REGION ||--o{ T2_STORE : "region_id"
+    T2_STORE ||--o{ T2_SALE : "store_id"
+    T2_PRODUCT ||--o{ T2_SALE : "product_id"
+
+    T2_REGION { NUMBER region_id PK VARCHAR2 r_name }
+    T2_STORE  { NUMBER store_id PK NUMBER region_id FK VARCHAR2 s_name }
+    T2_PRODUCT{ NUMBER product_id PK VARCHAR2 p_name NUMBER unit_price }
+    T2_SALE   { NUMBER sale_id PK NUMBER store_id FK NUMBER product_id FK NUMBER qty DATE sale_date }
+
+
+2) RELĀCIJU–OBJEKTU STRUKTŪRA (viena loģiskā «salikta» tabula)
+
+Loģika: viena rinda = viena REĢIONA objekts `t2_region_o`, kurā ir
+  • hierarhiski pakārtoti objekti: `t2_store_t` (veikals),
+  • katra veikala iekša kolekcija `t2_sale_line_nt` (pārdošanas rindas),
+  • katra rinda satur iegultu `t2_product_t` (prece kā apakšobjekts),
+  • metodes: produkta un rindas apjoma aprēķins, veikala un reģiona kopsummas.
+
+Teksta shematiska:
+
+    t2_region_o
+    ├── region_id, r_name
+    └── stores : t2_store_nt (kolekcija)
+            └── t2_store_t
+                  ├── store_id, s_name
+                  └── lines : t2_sale_line_nt (kolekcija)
+                        └── t2_sale_line_t
+                              ├── sale_id, qty, sale_date
+                              └── prod : t2_product_t
+                                    ├── product_id, p_name, unit_price
+                                    └── MEMBER revenue_for_qty(...)
+
+
+Fiziski Oracle: tabula T2_REGION_OBJ_TAB ... NESTED TABLE stores STORE AS ...
+                            (NESTED TABLE lines STORE AS ...)
+
+================================================================================

@@ -1,0 +1,354 @@
+================================================================================
+Task2 — pilna izpilde
+Sākta: 2026-05-13 06:53:38
+Datubāzes punkts (suffix pēc @): @localhost:1521/FREEPDB1
+Oracle klients: /Applications/SQLDeveloper.app/Contents/Resources/sqldeveloper/sqldeveloper/bin/sql
+JAVA_HOME (SQLcl): /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+================================================================================
+
+
+================================================================================
+=== 01_relational_ddl.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:53:38 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:53:39 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+Table T2_REGION created.
+
+
+Table T2_STORE created.
+
+
+Table T2_PRODUCT created.
+
+
+Table T2_SALE created.
+
+
+Index IDX_T2_SALE_STORE created.
+
+
+Index IDX_T2_SALE_PRODUCT created.
+
+
+Index IDX_T2_SALE_DATE created.
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+=== 02_relational_data.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:53:41 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:53:42 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+5 rows inserted.
+
+
+25 rows inserted.
+
+
+200 rows inserted.
+
+
+Commit complete.
+
+
+120,000 rows inserted.
+
+
+Commit complete.
+
+
+'T2_REGION'       COUNT(*) 
+______________ ___________ 
+t2_region                5 
+t2_store                25 
+t2_product             200 
+t2_sale             120000 
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+=== 03_functions.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:53:51 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:53:52 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+Function F2_LINE_VALUE compiled
+
+
+Function F2_REGION_LABEL compiled
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+=== 04_relational_queries_plan.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:53:53 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:53:53 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+57 rows deleted.
+
+
+Commit complete.
+
+
+PL/SQL procedure successfully completed.
+
+
+Explained.
+
+
+Explained.
+
+
+Explained.
+
+
+Explained.
+
+
+Explained.
+
+=== Relāciju: saknes SELECT STATEMENT — COST ===
+
+STATEMENT_ID       ROOT_COST 
+_______________ ____________ 
+T2_RQ1                   133 
+T2_RQ2                   115 
+T2_RQ3                   131 
+T2_RQ4                   127 
+T2_RQ5                   131 
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+=== 05_object_types.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:53:56 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:53:56 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+Type T2_PRODUCT_T compiled
+
+
+Type Body T2_PRODUCT_T compiled
+
+
+Type T2_SALE_LINE_T compiled
+
+
+Type Body T2_SALE_LINE_T compiled
+
+
+Type T2_SALE_LINE_NT compiled
+
+
+Type T2_STORE_T compiled
+
+
+Type Body T2_STORE_T compiled
+
+
+Type T2_STORE_NT compiled
+
+
+Type T2_REGION_O compiled
+
+
+Type Body T2_REGION_O compiled
+
+
+Table T2_REGION_OBJ_TAB created.
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+=== 06_object_load.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:53:59 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:53:59 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+Table T2_REGION_OBJ_TAB truncated.
+
+
+PL/SQL procedure successfully completed.
+
+
+PL/SQL procedure successfully completed.
+
+
+'T2_REGION_OBJ_TAB'       COUNT(*) 
+______________________ ___________ 
+t2_region_obj_tab                5 
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+=== 07_object_queries_plan.sql ===
+================================================================================
+
+
+
+SQLcl: Release 24.3 Production on Wed May 13 06:54:02 2026
+
+Copyright (c) 1982, 2026, Oracle.  All rights reserved.
+
+Last Successful login time: Wed May 13 2026 06:54:02 +03:00
+
+Connected to:
+Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+
+30 rows deleted.
+
+
+Commit complete.
+
+
+PL/SQL procedure successfully completed.
+
+
+Explained.
+
+
+Explained.
+
+
+Explained.
+
+
+Explained.
+
+
+Explained.
+
+=== Objektu tabula: saknes SELECT STATEMENT — COST ===
+
+STATEMENT_ID       ROOT_COST 
+_______________ ____________ 
+T2_OQ1                     2 
+T2_OQ2                 48945 
+T2_OQ3                     1 
+T2_OQ4                   276 
+T2_OQ5                 48945 
+
+Disconnected from Oracle AI Database 26ai Free Release 23.26.1.0.0 - Develop, Learn, and Run for Free
+Version 23.26.1.0.0
+
+================================================================================
+Pabeigts: 2026-05-13 06:54:04
+Izvade: /Users/viktorijadeksne/Documents/RTU/Datu bāzu sistēmu datu modeļi/Task2/task2_run_20260513_065338.txt
+================================================================================
+
